@@ -282,18 +282,28 @@ ok "Network is up"
 # Install Questarr inside the container
 # ──────────────────────────────────────────────────────────────
 INSTALLER_URL="https://raw.githubusercontent.com/${QUESTARR_REPO}/${QUESTARR_BRANCH}/scripts/proxmox/questarr-install.sh"
-LOCAL_INSTALLER="$(dirname "$(readlink -f "$0")")/questarr-install.sh"
+# Under `bash -c "$(curl ...)"`, $0 is "bash", not a file. Resolving it
+# anyway can fail inside a command substitution, where the inherited ERR
+# trap prints a bogus "Deployment failed" while the script carries on.
+LOCAL_INSTALLER=""
+if [ -f "$0" ]; then
+  LOCAL_INSTALLER="$(dirname "$(readlink -f "$0")")/questarr-install.sh"
+fi
+
+# pct exec forwards the host's LANG (e.g. en_US.UTF-8), which the Debian
+# template doesn't ship, so every apt/perl call inside warns about locales.
+CT_LOCALE=(LANG=C.UTF-8 LC_ALL=C.UTF-8)
 
 msg "Installing Questarr inside container ${CTID}"
-if [ -f "${LOCAL_INSTALLER}" ]; then
+if [ -n "${LOCAL_INSTALLER}" ] && [ -f "${LOCAL_INSTALLER}" ]; then
   # Running from a checkout: use the sibling installer so both halves match.
   pct push "${CTID}" "${LOCAL_INSTALLER}" /root/questarr-install.sh --perms 0755
 else
-  pct exec "${CTID}" -- bash -c \
+  pct exec "${CTID}" -- env "${CT_LOCALE[@]}" bash -c \
     "apt-get update -qq && apt-get install -y -qq --no-install-recommends curl ca-certificates >/dev/null && curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' '${INSTALLER_URL}' -o /root/questarr-install.sh && chmod 0755 /root/questarr-install.sh"
 fi
 
-pct exec "${CTID}" -- env \
+pct exec "${CTID}" -- env "${CT_LOCALE[@]}" \
   QUESTARR_REPO="${QUESTARR_REPO}" \
   QUESTARR_REF="${QUESTARR_REF}" \
   QUESTARR_PORT="${QUESTARR_PORT}" \

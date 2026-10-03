@@ -68,40 +68,6 @@ describe("DatabaseStorage Extended Coverage", () => {
     });
   });
 
-  describe("Platform mappings", () => {
-    it("supports full CRUD and lookup by igdb platform id", async () => {
-      const created = await storage.addPlatformMapping({
-        igdbPlatformId: 6,
-        sourcePlatformName: "PC",
-      });
-      expect(created.id).toBeDefined();
-
-      const byPlatformId = await storage.getPlatformMapping(6);
-      expect(byPlatformId?.sourcePlatformName).toBe("PC");
-
-      const updated = await storage.updatePlatformMapping(created.id, {
-        sourcePlatformName: "Windows PC",
-      });
-      expect(updated?.sourcePlatformName).toBe("Windows PC");
-
-      const removed = await storage.removePlatformMapping(created.id);
-      expect(removed).toBe(true);
-    });
-
-    it("seeds default mappings only when the table is empty", async () => {
-      const first = await storage.seedPlatformMappingsIfEmpty([
-        { igdbPlatformId: 6, sourcePlatformName: "PC" },
-        { igdbPlatformId: 48, sourcePlatformName: "PS4" },
-      ]);
-      expect(first).toEqual({ seeded: true, count: 2 });
-
-      const second = await storage.seedPlatformMappingsIfEmpty([
-        { igdbPlatformId: 130, sourcePlatformName: "Switch" },
-      ]);
-      expect(second).toEqual({ seeded: false, count: 2 });
-    });
-  });
-
   describe("Users", () => {
     it("creates, fetches, and lists users", async () => {
       const created = await storage.createUser({ username: "alice", passwordHash: "hash" });
@@ -148,17 +114,35 @@ describe("DatabaseStorage Extended Coverage", () => {
         status: "wanted",
         userId,
         hidden: false,
-        igdbId: 123,
+        rawgId: 123,
       };
       const game = await storage.addGame(gameData);
       expect(game.id).toBeDefined();
 
       expect((await storage.getGame(game.id))?.title).toBe("Test Game");
-      expect((await storage.getGameByIgdbId(123))?.id).toBe(game.id);
+      expect((await storage.getGameByRawgId(123))?.id).toBe(game.id);
 
       const statusUpdated = await storage.updateGameStatus(game.id, { status: "completed" });
       expect(statusUpdated?.status).toBe("completed");
       expect(statusUpdated?.completedAt).toBeTruthy();
+
+      // An automated update checks the status in the same UPDATE, so the
+      // user's pick survives even if the caller read the game earlier.
+      const skipped = await storage.updateGameStatus(
+        game.id,
+        { status: "owned" },
+        { preserveCurated: true }
+      );
+      expect(skipped).toBeUndefined();
+      expect((await storage.getGame(game.id))?.status).toBe("completed");
+
+      await storage.updateGameStatus(game.id, { status: "wanted" });
+      const moved = await storage.updateGameStatus(
+        game.id,
+        { status: "downloading" },
+        { preserveCurated: true }
+      );
+      expect(moved?.status).toBe("downloading");
 
       const hiddenUpdated = await storage.updateGameHidden(game.id, true);
       expect(hiddenUpdated?.hidden).toBe(true);

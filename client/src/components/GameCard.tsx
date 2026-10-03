@@ -1,3 +1,4 @@
+import { coverSrc } from "@/lib/cover";
 import React, { useState, memo, useRef, useEffect, lazy, Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -138,7 +139,7 @@ const GameCard = ({
         {/* ⚡ Bolt: Lazy loading images prevents fetching all game covers upfront,
             improving initial page load speed, especially on pages with many carousels. */}
         <img
-          src={game.coverUrl || "/placeholder-game-cover.jpg"}
+          src={coverSrc(game.coverUrl)}
           alt={`${game.title} cover`}
           className="thumbnail-image rounded-t-md"
           loading="lazy"
@@ -226,13 +227,25 @@ const GameCard = ({
         >
           {game.title}
         </h3>
+        {game.rawgId && (
+          <a
+            href={`https://rawg.io/games/${game.rawgSlug ?? game.rawgId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-2 w-fit text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            aria-label={`View ${game.title} on RAWG`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            RAWG
+          </a>
+        )}
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <div
                 className="flex items-center gap-1"
                 role="img"
-                aria-label={`IGDB rating: ${game.rating ? game.rating + " out of 10" : "Not rated"}`}
+                aria-label={`RAWG rating: ${game.rating ? game.rating + " out of 10" : "Not rated"}`}
               >
                 <Star className="w-3 h-3 text-accent" aria-hidden="true" />
                 <span data-testid={`text-rating-${game.id}`}>
@@ -241,7 +254,7 @@ const GameCard = ({
               </div>
             </TooltipTrigger>
             <TooltipContent>
-              <p>IGDB score</p>
+              <p>RAWG score</p>
             </TooltipContent>
           </Tooltip>
           {!isDiscovery && game.userRating !== null && game.userRating !== undefined && (

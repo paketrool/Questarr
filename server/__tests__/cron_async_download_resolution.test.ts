@@ -41,9 +41,6 @@ vi.mock("../search.js", () => ({
   filterByReleaseNameBlacklist: vi.fn((items: unknown[]) => items),
   searchAllIndexers: vi.fn(),
 }));
-vi.mock("../igdb.js", () => ({
-  igdbClient: { getGamesByIds: vi.fn() },
-}));
 vi.mock("../socket.js", () => ({
   notifyUser: mockNotifyUser,
 }));
@@ -80,8 +77,14 @@ vi.mock("../logger.js", () => ({
   routesLogger: createMockLogger(),
   torznabLogger: createMockLogger(),
   searchLogger: createMockLogger(),
-  igdbLogger: createMockLogger(),
-  logger: { child: vi.fn().mockReturnThis() },
+  rawgLogger: createMockLogger(),
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn().mockReturnThis(),
+  },
 }));
 
 const { checkDownloadStatus } = await import("../cron.js");
@@ -319,7 +322,11 @@ describe("Cron — async qBittorrent correlation tag resolution", () => {
       "failed",
       "The download client never registered this download."
     );
-    expect(mockUpdateGameStatus).toHaveBeenCalledWith("game-1", { status: "wanted" });
+    expect(mockUpdateGameStatus).toHaveBeenCalledWith(
+      "game-1",
+      { status: "wanted" },
+      { preserveCurated: true }
+    );
     expect(mockNotifyUser).toHaveBeenCalledWith("downloadUpdate", "game-1");
   });
 
@@ -403,7 +410,11 @@ describe("Cron — async qBittorrent correlation tag resolution", () => {
 
     // After resolution, the download was matched and marked completed + owned.
     expect(mockUpdateGameDownloadStatus).toHaveBeenCalledWith("gd-async-3", "completed");
-    expect(mockUpdateGameStatus).toHaveBeenCalledWith("game-1", { status: "owned" });
+    expect(mockUpdateGameStatus).toHaveBeenCalledWith(
+      "game-1",
+      { status: "owned" },
+      { preserveCurated: true }
+    );
     expect(mockNotifyUser).toHaveBeenCalledWith("downloadUpdate", "game-1");
   });
 });

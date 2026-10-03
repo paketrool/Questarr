@@ -1,3 +1,4 @@
+import { coverSrc } from "@/lib/cover";
 import React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -116,7 +117,7 @@ export default function DiscoverSettingsModal({
                 >
                   <div className="flex items-center gap-3 overflow-hidden">
                     <img
-                      src={game.coverUrl || "/placeholder-game-cover.jpg"}
+                      src={coverSrc(game.coverUrl)}
                       alt={game.title}
                       className="w-10 h-14 object-cover rounded"
                     />

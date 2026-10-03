@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from "r
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiFetch, apiRequest, setBearerToken } from "./queryClient";
+import { disconnectSocket } from "./socket";
 import { useToast } from "@/hooks/use-toast";
 
 type User = {
@@ -112,13 +113,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (res.status === 401 || res.status === 403) {
         setBearerToken(null);
         // Drop every other cached query (stale authenticated data from a
-        // prior session) but deliberately spare "/api/auth/status" --
-        // clearing the whole client here can cancel that query's own
-        // in-flight fetch and strand its observers (setup/config screens)
-        // on an indefinite loading state instead of just re-resolving once
-        // this query itself settles to null.
+        // prior session) but deliberately spare "/api/auth/status" and this
+        // query itself -- removing a query while its fetch is in flight
+        // strands its observers (setup/config screens, the login button via
+        // isFetchingUser) on an indefinite loading state instead of letting
+        // them re-resolve once the fetch settles (to null, here).
         queryClient.removeQueries({
-          predicate: (query) => query.queryKey[0] !== "/api/auth/status",
+          predicate: (query) =>
+            query.queryKey[0] !== "/api/auth/status" && query.queryKey[0] !== "/api/auth/me",
         });
         return null;
       }
@@ -169,6 +171,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // clobbering this fresh, valid cookie session on every later
       // /api/auth/me check.
       setBearerToken(null);
+      // Keep the "/api/auth/me" cache in step with the new session: cancel any
+      // in-flight check first so a late 401 from before login can't land on
+      // top and null the user out again.
+      await queryClient.cancelQueries({ queryKey: ["/api/auth/me"] });
+      queryClient.setQueryData(["/api/auth/me"], data.user);
       setUser(data.user);
     },
     onSuccess: () => {
@@ -208,6 +215,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       return;
     }
     setBearerToken(null);
+    disconnectSocket();
     setUser(null);
     queryClient.clear();
     setLocation("/login");

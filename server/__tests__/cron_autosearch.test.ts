@@ -12,8 +12,13 @@ const createMockLogger = () => ({
 
 // Mock logger to avoid noise and missing exports
 vi.mock("../logger.js", () => ({
-  logger: { child: vi.fn().mockReturnThis() },
-  igdbLogger: createMockLogger(),
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    child: vi.fn().mockReturnThis(),
+  },
   searchLogger: createMockLogger(),
   torznabLogger: createMockLogger(),
   routesLogger: createMockLogger(),
@@ -105,13 +110,6 @@ vi.mock("../downloaders.js", () => ({
   },
 }));
 
-// Mock igdb
-vi.mock("../igdb.js", () => ({
-  igdbClient: {
-    getGamesByIds: vi.fn(),
-  },
-}));
-
 // Mock xrel
 vi.mock("../xrel.js", () => ({
   xrelClient: {
@@ -123,7 +121,9 @@ vi.mock("../xrel.js", () => ({
 // Import the function under test
 // We need to use dynamic import or require because of the hoisting of vi.mock
 const { checkAutoSearch, categorizeSearchItems } = await import("../cron.js");
-const { igdbLogger } = await import("../logger.js");
+// cron.ts logs through logger.child({module:"cron"}); the mock child() returns
+// the logger mock itself, so assertions target that object.
+const { logger: cronLogger } = await import("../logger.js");
 
 describe("Cron - checkAutoSearch", () => {
   const userId = "user-123";
@@ -164,7 +164,6 @@ describe("Cron - checkAutoSearch", () => {
     notifyMultipleDownloads: false,
     notifyUpdates: false,
     searchIntervalHours: 6, // Default interval
-    igdbRateLimitPerSecond: 3,
     downloadRules: null,
     lastAutoSearch: null, // Never searched before, so should run immediately
     xrelSceneReleases: true,
@@ -614,6 +613,34 @@ describe("Cron - checkAutoSearch", () => {
           message: expect.stringContaining("[SKIDROW]"),
         })
       );
+    });
+
+    it("guards the downloading status write so a status curated mid-search survives", async () => {
+      const settings = { ...baseSettings, autoDownloadEnabled: true };
+      const mockDownloader = { id: "dl-1", name: "qBittorrent", type: "torrent", enabled: true };
+
+      mockGetUserSettings.mockResolvedValue(settings);
+      mockGetEnabledDownloaders.mockResolvedValue([mockDownloader]);
+      mockAddDownloadWithFallback.mockResolvedValue({
+        success: true,
+        id: "hash-abc",
+        downloaderId: "dl-1",
+      });
+      mockSearchAllIndexers.mockResolvedValue({
+        items: [{ ...SKIDROW_ITEM, downloadType: "torrent" }],
+        errors: [],
+        total: 1,
+      });
+
+      await checkAutoSearch();
+
+      const downloadingWrites = mockUpdateGameStatus.mock.calls.filter(
+        (call) => (call[1] as { status?: string } | undefined)?.status === "downloading"
+      );
+      expect(downloadingWrites.length).toBeGreaterThan(0);
+      for (const call of downloadingWrites) {
+        expect(call[2]).toEqual({ preserveCurated: true });
+      }
     });
 
     it("should not include group suffix in Download Started notification when item has no group", async () => {
@@ -1149,7 +1176,7 @@ describe("Cron - checkAutoSearch", () => {
 
     await checkAutoSearch();
 
-    expect(igdbLogger.warn).toHaveBeenCalledWith(
+    expect(cronLogger.warn).toHaveBeenCalledWith(
       expect.objectContaining({ gameTitle: game.title }),
       expect.stringContaining(message)
     );
@@ -1175,7 +1202,7 @@ describe("Cron - checkAutoSearch", () => {
 
     await checkAutoSearch();
 
-    expect(igdbLogger.debug).toHaveBeenCalledWith(
+    expect(cronLogger.debug).toHaveBeenCalledWith(
       expect.objectContaining({ gameTitle: game.title, originalCount: 1 }),
       "No items passed strict title matching"
     );
@@ -1582,6 +1609,59 @@ describe("Cron - checkAutoSearch", () => {
       expect(result.mainItems.map((item) => item.title)).toEqual([
         "Test Game-KNOWN",
         "Test Game-UNKNOWN",
+      ]);
+    });
+
+    it("should keep Usenet releases when minSeeders is set, since they have no seeders", () => {
+      const nzb = {
+        title: "Test Game-NZB",
+        link: "https://example.com/nzb",
+        pubDate: FIXED_PUB_DATE,
+        size: 10_000,
+        grabs: 12,
+        downloadType: "usenet" as const,
+        indexerId: "indexer-1",
+      };
+      const torrent = {
+        ...ITEM_LOW_SEEDERS,
+        downloadType: "torrent" as const,
+        indexerId: "indexer-1",
+      };
+
+      const result = categorizeSearchItems([torrent, nzb] as never, {
+        minSeeders: 10,
+        sortBy: "seeders",
+        visibleCategoriesSet: new Set(["main"]),
+      });
+
+      expect(result.mainItems.map((item) => item.title)).toEqual(["Test Game-NZB"]);
+    });
+
+    it("should rank Usenet releases by grabs when sorting by seeders", () => {
+      const popularNzb = {
+        title: "Test Game-POPULAR",
+        link: "https://example.com/popular",
+        pubDate: FIXED_PUB_DATE,
+        size: 10_000,
+        grabs: 500,
+        downloadType: "usenet" as const,
+        indexerId: "indexer-1",
+      };
+      const torrent = {
+        ...ITEM_HIGH_SEEDERS,
+        downloadType: "torrent" as const,
+        indexerId: "indexer-1",
+      };
+
+      const result = categorizeSearchItems([torrent, popularNzb] as never, {
+        minSeeders: 0,
+        sortBy: "seeders",
+        visibleCategoriesSet: new Set(["main"]),
+      });
+
+      expect(result.mainItems.map((item) => item.title)).toEqual([
+        "Test Game-POPULAR",
+        "Test Game-CODEX",
       ]);
     });
   });

@@ -31,6 +31,8 @@ Coverage depth is continuous, not binary: for each metric, `points = clamp((actu
 | Functions  | 77%      | 81%    |
 | Lines      | 82%      | 86%    |
 
+The floors in this table are the ones hard-coded in the locked `scripts/goal-score.mjs`. Since 2026-09-30 the actual CI gate in `vitest.config.ts` is stricter (83/76/79/84), ratcheted up to keep the Phase 2 gain.
+
 `Tests + coverage gate` reuses the single `npm run test:coverage` run for both the validation pass/fail signal and the `coverage-summary.json` that feeds coverage depth — the suite is not run twice per score.
 
 ### Metric Mutability
@@ -182,7 +184,7 @@ Next actions:
   - Mobile responsiveness pass once thumb-first layout work lands
 ```
 
-### Phase 2 (in progress)
+### Phase 2 (complete)
 
 ```
 Starting score (Phase 2): 80.4 — recorded 2026-07-12
@@ -192,7 +194,25 @@ Baseline coverage_depth breakdown:
   Branches   75.05% (floor 74%, target 78%) — 1.97/7.5
   Functions  78.52% (floor 77%, target 81%) — 2.85/7.5
   Lines      83.56% (floor 82%, target 86%) — 2.93/7.5
-Status: in progress — this block will be filled in with ending score, iteration
-  count, and changes made once Phase 2 reaches a stopping condition (see
-  Stopping Conditions above).
+Ending score (Phase 2): 100.0 — reached 2026-09-30 (stopping condition: score >= 90)
+  Baseline for this run, measured on main @ c76a56a: 88.1
+    validation 30/30, page_coverage 20/20, e2e_journeys 20/20, coverage_depth 18.1/30
+    Statements 83.63%, Branches 75.86%, Functions 79.29%, Lines 84.87%
+  After: coverage_depth 30/30
+    Statements 85.01%, Branches 78.13%, Functions 82.12%, Lines 86.34%
+Iterations: 2 logged (iteration 5, then iteration 6 on 2026-09-30)
+Changes made:
+  - Iteration 6: page-level tests for the Downloaders page (was 1.5% branch
+    coverage: list ordering and badges, enable toggle, priority clamping,
+    delete/test outcomes, per-client-type form fields, default-port and SSL
+    port switching, qBittorrent initial state, add/test/save and validation)
+    and for the 1.5.0 game journal tab (was 0%: Steam achievements gating,
+    notes, milestones, screenshot upload/lightbox/delete, error toast)
+    — score 88.1 -> 100
+  - Ratcheted the vitest.config.ts floors to 83/76/79/84 (each about 2 points
+    under the measured value) so CI keeps the gain.
+Remaining gaps (next targets if the loop restarts with higher targets):
+  - server/routes.ts (about 400 uncovered branches), client/src/pages/settings.tsx
+    (about 240), server/storage.ts (about 190), GameDownloadDialog.tsx and
+    GameDetailsModal.tsx (about 100 each).
 ```

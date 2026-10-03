@@ -34,8 +34,6 @@ import {
   type InsertImportTaskItem,
   type PathMapping,
   type InsertPathMapping,
-  type PlatformMapping,
-  type InsertPlatformMapping,
   type ImportConfig,
   importConfigSchema,
   type GameFile,
@@ -44,6 +42,8 @@ import {
   type ApiKeyPublic,
   GAME_LINK_REQUIRED_STATUS,
   QUARANTINED_STATUS,
+  USER_CURATED_GAME_STATUSES,
+  isUserCuratedGameStatus,
   type RootFolder,
   type InsertRootFolder,
   type UpdateRootFolder,
@@ -66,7 +66,6 @@ import {
   rssFeeds,
   rssFeedItems,
   pathMappings,
-  platformMappings,
   importTasks,
   importTaskItems,
   releaseBlacklist,
@@ -216,13 +215,24 @@ export interface IStorage {
 
   // Game methods
   getGame(id: string): Promise<Game | undefined>;
-  getGameByIgdbId(igdbId: number): Promise<Game | undefined>;
+  getGameByRawgId(rawgId: number): Promise<Game | undefined>;
   getUserGames(userId: string, includeHidden?: boolean, statuses?: string[]): Promise<Game[]>;
   getAllGames(): Promise<Game[]>; // Keep for admin/debug or global search? Or maybe deprecated.
   getUserGamesByStatus(userId: string, status: string, includeHidden?: boolean): Promise<Game[]>;
   searchUserGames(userId: string, query: string, includeHidden?: boolean): Promise<Game[]>;
   addGame(game: InsertGame): Promise<Game>;
-  updateGameStatus(id: string, statusUpdate: UpdateGameStatus): Promise<Game | undefined>;
+  /**
+   * Set a game's status. With `preserveCurated`, the write only applies while the
+   * game's *current* status is not one the user set by hand (playing, shelved,
+   * completed), checked in the same statement so a status the user picks while
+   * a download or import is running can't be overwritten by the pipeline.
+   * Returns undefined when nothing was updated.
+   */
+  updateGameStatus(
+    id: string,
+    statusUpdate: UpdateGameStatus,
+    options?: { preserveCurated?: boolean }
+  ): Promise<Game | undefined>;
   updateGameHidden(id: string, hidden: boolean): Promise<Game | undefined>;
   updateGameUserRating(
     id: string,
@@ -374,19 +384,6 @@ export interface IStorage {
   ): Promise<PathMapping | undefined>;
   removePathMapping(id: string): Promise<boolean>;
 
-  // Platform Mapping methods
-  getPlatformMappings(): Promise<PlatformMapping[]>;
-  getPlatformMapping(igdbPlatformId: number): Promise<PlatformMapping | undefined>;
-  addPlatformMapping(mapping: InsertPlatformMapping): Promise<PlatformMapping>;
-  seedPlatformMappingsIfEmpty(
-    mappings: InsertPlatformMapping[]
-  ): Promise<{ seeded: boolean; count: number }>;
-  updatePlatformMapping(
-    id: string,
-    updates: Partial<InsertPlatformMapping>
-  ): Promise<PlatformMapping | undefined>;
-  removePlatformMapping(id: string): Promise<boolean>;
-
   // Config Accessors (Helper methods)
   getImportConfig(userId?: string): Promise<ImportConfig>;
 
@@ -467,7 +464,6 @@ export class MemStorage implements IStorage {
   private rssFeeds: Map<string, RssFeed>;
   private rssFeedItems: Map<string, RssFeedItem>;
   private readonly pathMappings: Map<string, PathMapping>;
-  private readonly platformMappings: Map<string, PlatformMapping>;
   private releaseBlacklists: Map<string, ReleaseBlacklist>;
   private aiAutoDownloadHolds: Map<string, AiAutoDownloadHold>;
   private gameFiles: Map<string, GameFile>;
@@ -490,7 +486,6 @@ export class MemStorage implements IStorage {
     this.rssFeeds = new Map();
     this.rssFeedItems = new Map();
     this.pathMappings = new Map();
-    this.platformMappings = new Map();
     this.releaseBlacklists = new Map();
     this.aiAutoDownloadHolds = new Map();
     this.gameFiles = new Map();
@@ -571,8 +566,8 @@ export class MemStorage implements IStorage {
     return this.games.get(id);
   }
 
-  async getGameByIgdbId(igdbId: number): Promise<Game | undefined> {
-    return Array.from(this.games.values()).find((game) => game.igdbId === igdbId);
+  async getGameByRawgId(rawgId: number): Promise<Game | undefined> {
+    return Array.from(this.games.values()).find((game) => game.rawgId === rawgId);
   }
 
   async getUserGames(userId: string, includeHidden = false, statuses?: string[]): Promise<Game[]> {
@@ -624,6 +619,7 @@ export class MemStorage implements IStorage {
     const game: Game = {
       ...insertGame,
       id,
+      igdbId: null, // Legacy column; never populated since IGDB was retired.
       userId: insertGame.userId || null,
       status: insertGame.status || "wanted",
       hidden: insertGame.hidden ?? false, // Convert boolean to number or keep as boolean depending on memory usage
@@ -641,10 +637,11 @@ export class MemStorage implements IStorage {
       publishers: insertGame.publishers || null,
       developers: insertGame.developers || null,
       screenshots: insertGame.screenshots || null,
-      igdbId: insertGame.igdbId || null,
+      rawgId: insertGame.rawgId || null,
+      rawgSlug: insertGame.rawgSlug || null,
       steamAppId: insertGame.steamAppId || null,
       source: insertGame.source ?? null,
-      igdbWebsites: insertGame.igdbWebsites || null,
+      websites: insertGame.websites || null,
       expansions: insertGame.expansions || null,
       aggregatedRating: insertGame.aggregatedRating ?? null,
       timeToBeatHastily: insertGame.timeToBeatHastily ?? null,
@@ -666,9 +663,14 @@ export class MemStorage implements IStorage {
     return game;
   }
 
-  async updateGameStatus(id: string, statusUpdate: UpdateGameStatus): Promise<Game | undefined> {
+  async updateGameStatus(
+    id: string,
+    statusUpdate: UpdateGameStatus,
+    options?: { preserveCurated?: boolean }
+  ): Promise<Game | undefined> {
     const game = this.games.get(id);
     if (!game) return undefined;
+    if (options?.preserveCurated && isUserCuratedGameStatus(game.status)) return undefined;
 
     const leavingWanted = game.status === "wanted" && statusUpdate.status !== "wanted";
 
@@ -1462,8 +1464,8 @@ export class MemStorage implements IStorage {
       ...item,
       id,
       createdAt: new Date(),
-      igdbGameId: item.igdbGameId ?? null,
-      igdbGameName: item.igdbGameName ?? null,
+      rawgGameId: item.rawgGameId ?? null,
+      rawgGameName: item.rawgGameName ?? null,
       coverUrl: item.coverUrl ?? null,
       pubDate: item.pubDate ?? null,
       sourceName: item.sourceName ?? null,
@@ -1501,7 +1503,6 @@ export class MemStorage implements IStorage {
       autoDownloadEnabled: insertSettings.autoDownloadEnabled ?? false,
       notificationPreferences: insertSettings.notificationPreferences ?? null,
       searchIntervalHours: insertSettings.searchIntervalHours ?? 6,
-      igdbRateLimitPerSecond: insertSettings.igdbRateLimitPerSecond ?? 3,
       downloadRules: insertSettings.downloadRules ?? null,
       lastAutoSearch: insertSettings.lastAutoSearch ?? null,
       xrelSceneReleases: insertSettings.xrelSceneReleases ?? true,
@@ -1616,53 +1617,6 @@ export class MemStorage implements IStorage {
 
   async removePathMapping(id: string): Promise<boolean> {
     return this.pathMappings.delete(id);
-  }
-
-  // Platform Mapping methods
-  async getPlatformMappings(): Promise<PlatformMapping[]> {
-    return Array.from(this.platformMappings.values());
-  }
-
-  async getPlatformMapping(igdbPlatformId: number): Promise<PlatformMapping | undefined> {
-    return Array.from(this.platformMappings.values()).find(
-      (m) => m.igdbPlatformId === igdbPlatformId
-    );
-  }
-
-  async addPlatformMapping(insertMapping: InsertPlatformMapping): Promise<PlatformMapping> {
-    const id = randomUUID();
-    const mapping: PlatformMapping = { ...insertMapping, id };
-    this.platformMappings.set(id, mapping);
-    return mapping;
-  }
-
-  async seedPlatformMappingsIfEmpty(
-    mappings: InsertPlatformMapping[]
-  ): Promise<{ seeded: boolean; count: number }> {
-    if (this.platformMappings.size > 0) {
-      return { seeded: false, count: this.platformMappings.size };
-    }
-
-    for (const mapping of mappings) {
-      await this.addPlatformMapping(mapping);
-    }
-
-    return { seeded: true, count: this.platformMappings.size };
-  }
-
-  async updatePlatformMapping(
-    id: string,
-    updates: Partial<InsertPlatformMapping>
-  ): Promise<PlatformMapping | undefined> {
-    const existing = this.platformMappings.get(id);
-    if (!existing) return undefined;
-    const updated = { ...existing, ...updates };
-    this.platformMappings.set(id, updated);
-    return updated;
-  }
-
-  async removePlatformMapping(id: string): Promise<boolean> {
-    return this.platformMappings.delete(id);
   }
 
   // Config Accessors
@@ -2019,54 +1973,6 @@ export class DatabaseStorage implements IStorage {
     return deleted.length > 0;
   }
 
-  // Platform Mapping methods
-  async getPlatformMappings(): Promise<PlatformMapping[]> {
-    return db.select().from(platformMappings);
-  }
-
-  async getPlatformMapping(igdbPlatformId: number): Promise<PlatformMapping | undefined> {
-    const [mapping] = await db
-      .select()
-      .from(platformMappings)
-      .where(eq(platformMappings.igdbPlatformId, igdbPlatformId));
-    return mapping || undefined;
-  }
-
-  async addPlatformMapping(insertMapping: InsertPlatformMapping): Promise<PlatformMapping> {
-    const id = randomUUID();
-    const rows = await db
-      .insert(platformMappings)
-      .values({ ...insertMapping, id })
-      .returning();
-    return firstOrThrow(rows);
-  }
-
-  async seedPlatformMappingsIfEmpty(
-    mappings: InsertPlatformMapping[]
-  ): Promise<{ seeded: boolean; count: number }> {
-    return transactionalOps.seedPlatformMappingsIfEmpty(mappings);
-  }
-
-  async updatePlatformMapping(
-    id: string,
-    updates: Partial<InsertPlatformMapping>
-  ): Promise<PlatformMapping | undefined> {
-    const [updated] = await db
-      .update(platformMappings)
-      .set(updates)
-      .where(eq(platformMappings.id, id))
-      .returning();
-    return updated || undefined;
-  }
-
-  async removePlatformMapping(id: string): Promise<boolean> {
-    const deleted = await db
-      .delete(platformMappings)
-      .where(eq(platformMappings.id, id))
-      .returning();
-    return deleted.length > 0;
-  }
-
   // Config Accessors
   async getImportConfig(userId?: string): Promise<ImportConfig> {
     const [settings] = userId
@@ -2135,8 +2041,8 @@ export class DatabaseStorage implements IStorage {
     return game || undefined;
   }
 
-  async getGameByIgdbId(igdbId: number): Promise<Game | undefined> {
-    const [game] = await db.select().from(games).where(eq(games.igdbId, igdbId));
+  async getGameByRawgId(rawgId: number): Promise<Game | undefined> {
+    const [game] = await db.select().from(games).where(eq(games.rawgId, rawgId));
     return game || undefined;
   }
 
@@ -2201,7 +2107,6 @@ export class DatabaseStorage implements IStorage {
       id: randomUUID(),
       userId: insertGame.userId ?? null,
       title: insertGame.title,
-      igdbId: insertGame.igdbId ?? null,
       summary: insertGame.summary ?? null,
       coverUrl: insertGame.coverUrl ?? null,
       releaseDate: insertGame.releaseDate ?? null,
@@ -2214,9 +2119,11 @@ export class DatabaseStorage implements IStorage {
       publishers: insertGame.publishers ?? null,
       developers: insertGame.developers ?? null,
       screenshots: insertGame.screenshots ?? null,
+      rawgId: insertGame.rawgId ?? null,
+      rawgSlug: insertGame.rawgSlug ?? null,
       steamAppId: insertGame.steamAppId ?? null,
       source: insertGame.source ?? null,
-      igdbWebsites: insertGame.igdbWebsites ?? null,
+      websites: insertGame.websites ?? null,
       expansions: insertGame.expansions ?? null,
       aggregatedRating: insertGame.aggregatedRating ?? null,
       timeToBeatHastily: insertGame.timeToBeatHastily ?? null,
@@ -2236,7 +2143,11 @@ export class DatabaseStorage implements IStorage {
     return firstOrThrow(rows);
   }
 
-  async updateGameStatus(id: string, statusUpdate: UpdateGameStatus): Promise<Game | undefined> {
+  async updateGameStatus(
+    id: string,
+    statusUpdate: UpdateGameStatus,
+    options?: { preserveCurated?: boolean }
+  ): Promise<Game | undefined> {
     const existingGame = await this.getGame(id);
     const leavingWanted = existingGame?.status === "wanted" && statusUpdate.status !== "wanted";
 
@@ -2253,7 +2164,11 @@ export class DatabaseStorage implements IStorage {
             }
           : {}),
       })
-      .where(eq(games.id, id))
+      .where(
+        options?.preserveCurated
+          ? and(eq(games.id, id), not(inArray(games.status, [...USER_CURATED_GAME_STATUSES])))
+          : eq(games.id, id)
+      )
       .returning();
 
     return updatedGame || undefined;

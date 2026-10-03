@@ -15,9 +15,9 @@ All notable changes to this project will be documented in this file.
 - **Library filters**: added filters to hide shelved games and games already owned from search/discover results (#1089).
 - **"Playing" status** for games (#1043), with a dedicated **Playing** page — journal notes, a milestones checklist, screenshots, and Steam achievements per game (#1080).
 - **Crack status** section on the game detail page (#1012, #1062).
-- **Time to Beat** via IGDB's official endpoint (#1063).
+- **Time to Beat** section on the game detail page (#1063).
 - **Sort menu** on the Library page, plus an indexer-priority sort option for downloads (#980, #963).
-- **DLC & expansions**: games now persist their IGDB expansions and show them in a new DLC tab on the game detail page, with cover art, release year, and a category badge (#1105).
+- **DLC & expansions**: games now persist their RAWG expansions and show them in a new DLC tab on the game detail page, with cover art, release year, and a category badge (#1105).
 - **xREL**: surfaces a release's nuke reason with a "Nuked" badge (#948).
 - **Screenshot lightbox**: carousel navigation with arrow-key and swipe support, plus an image counter (#804).
 - **Wishlist**: configurable grid column count (#871).
@@ -38,7 +38,7 @@ All notable changes to this project will be documented in this file.
 
 #### Integrations
 
-- **PostgreSQL backend**: [OPTIONAL] Questarr can now run on PostgreSQL instead of SQLite, selected via `DATABASE_URL`/config (#1046). See `docs/DATABASE.md` if you're looking to migrate from SQLite.
+- **PostgreSQL backend**: [OPTIONAL] Questarr can now run on PostgreSQL instead of SQLite, selected with `DB_DIALECT=postgres` plus `DATABASE_URL` (setting `DATABASE_URL` alone keeps SQLite) (#1046). See `docs/DATABASE.md` if you're looking to migrate from SQLite.
 - **Playnite integration**: API keys, an integration API, and a Playnite extension. See [the extension's README](../extensions/playnite-questarr/README.md) for setup (#986).
 - **Steam wishlist**: optional auto-sync on a configurable interval, alongside the existing manual sync (#805).
 
@@ -71,9 +71,10 @@ All notable changes to this project will be documented in this file.
 - **Prowlarr**: download links no longer double-wrapped when the proxy URL comes back on a container IP (#1007).
 - **Indexers**: search categories outside 40xx/10xx were being dropped; hardened Newznab/Torznab caps discovery (#1058, #951).
 - **Downloaders**: credential policy now validates the resolved URL, not just `useSsl` (#1061).
-- **IGDB**: validated the rate-limit setting's range; canonicalized/deduped game editions in search results (#1020, #950).
+- **Metadata provider**: validated the rate-limit setting's range; canonicalized/deduped game editions in search results (#1020, #950).
 - **Unraid**: fixed the Community Applications template category and default `PUID`/`PGID`, and added an optional Library Path and `UMASK` setting (#850, #886).
 - **safeFetch**: fixed the `Host` header being silently replaced by the resolved IP on plain-HTTP requests, which broke Prowlarr's proxy-link matching (#822).
+- **HTTPS**: the `ssl.redirectHttp` option never redirected anything, because its middleware was registered after the web app's catch-all route. It now runs ahead of every route and keeps the base path and query string. With `QUESTARR_BASE_PATH` set, the HTTPS listener now also serves the app under that path, like the HTTP one.
 
 #### Documentation
 
@@ -86,13 +87,26 @@ All notable changes to this project will be documented in this file.
 - **Calendar**: follow-up fixes to the year view's date filtering.
 - **Release notifications**: no longer sent for games added with a release date already in the past (#874).
 - **Scroll areas**: scrollbars stayed hidden except while actively scrolling (#875).
+- **Game status**: a game marked Playing, Shelved or Completed kept being reset by the download pipeline: an update download flipped it to Downloading, then Owned on import (or Wanted if the download failed), and a root-folder scan flipped it to Owned. Those statuses are now left alone, update/pack searches keep running for Playing and Shelved games, and Discover treats them as owned.
+- **Auto-search**: with a minimum seeders rule set, every Usenet result was dropped because NZBs have no seeders; the rule now only applies to torrents (as in the manual download dialog), and Usenet results rank by grabs.
+- **Cover art**: games without a cover (manual or API adds) showed a broken image with its alt text on top, because the fallback pointed at a file that was never shipped. A bundled placeholder now takes its place.
+- **API**: unknown `/api/*` paths returned the web app's HTML with a 200; they now answer with a JSON 404.
 
 ### Changed
+
+#### Metadata Provider
+
+- **RAWG is now the sole metadata provider.** Discovery, search, the library
+  scanner, Steam wishlist sync, and release-date update checks all use the
+  RAWG API (free key from [rawg.io/apidocs](https://rawg.io/apidocs)). The
+  setup wizard and **Settings → RAWG API** take a single API key (env var
+  `RAWG_API_KEY` or stored in system config, which takes precedence), and the
+  old provider switch in Discover is gone.
 
 #### Auth & Settings
 
 - **Auth**: migrated to httpOnly cookies plus CSRF, with a bearer-token fallback (#954).
-- **IGDB credential validation** and a test-connection UI (#1064).
+- **RAWG API key validation** and a test-connection UI (#1064).
 - **Settings**: reorganized page tabs by domain; moved the Discord webhook config to the Stats page (#949, #946).
 - **Appearance**: unified theme selection into a single dropdown (#1042).
 
@@ -116,6 +130,8 @@ All notable changes to this project will be documented in this file.
 #### Access Control
 
 - **API auth**: added a default-deny boundary and fixed an unauthenticated `GET /api/config` (#953).
+- **Real-time channel**: the Socket.IO connection now requires the same session as the REST API. Before, anyone who could reach the port could open it and receive the live server log stream, notifications and download progress. A handshake that relies on the session cookie must also come from Questarr's own origin (reverse proxies that set `X-Forwarded-Host` work unchanged; otherwise list the public URL in `ALLOWED_ORIGINS` or `APP_URL`).
+- **Delete with files**: deleting a game whose library path is the library root (or an opted-in root folder) itself no longer removes that whole folder.
 - **Auth**: failed login attempts are now logged for brute-force/credential-stuffing detection (#858); fixed an IDOR letting any user modify or delete another user's games, and strengthened the password policy to 8+ characters with a letter and a digit (#859).
 - **Input validation**: hardened indexer search, qBittorrent, NexusMods, and game-status endpoints against unbounded/malformed input (#857).
 
@@ -180,6 +196,12 @@ Inventory from `scripts/cve-report.mjs` / `scripts/cwe-report.mjs` against OSV.d
 - Docker base image: `apk upgrade` for Alpine's patched `openssl`/`expat` (Trivy #417, #361, #351, #364, #363); removed the base image's bundled npm CLI after `npm prune`, dropping its vendored `tar`/`ip-address`/`brace-expansion` copies (Trivy #350, #287, #286, #272) (#1113).
 
 ### Removed
+
+- **IGDB integration**: the IGDB API client (`server/igdb.ts`), its Twitch
+  OAuth credentials (`IGDB_CLIENT_ID`/`IGDB_CLIENT_SECRET`), and all
+  `/api/igdb/*` routes are gone, replaced by the RAWG client and
+  `/api/rawg/*` routes. The legacy `igdb_id` database column is preserved
+  (no destructive migration); it is no longer written.
 
 - **Legacy PostgreSQL migration tooling**: removed `scripts/pg-to-sqlite.ts` and
   `docker-compose.migrate.yml`. The tool dated from the v1.1 move off PostgreSQL

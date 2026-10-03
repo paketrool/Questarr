@@ -5,7 +5,7 @@ import request from "supertest";
 import {
   mockConfig,
   createStorageMock,
-  createIgdbMock,
+  createRawgMock,
   createAuthMock,
   createDbModuleMock,
   createLoggerMocks,
@@ -53,7 +53,7 @@ vi.mock("../rss.js", () => ({ rssService: createRssMock() }));
 vi.mock("../logger.js", () => createLoggerMocks());
 vi.mock("../db.js", () => createDbModuleMock());
 vi.mock("../auth.js", () => createAuthMock());
-vi.mock("../igdb.js", () => ({ igdbClient: createIgdbMock() }));
+vi.mock("../rawg.js", () => ({ rawgClient: createRawgMock() }));
 vi.mock("../storage.js", () => ({ storage: createStorageMock() }));
 
 type FallbackResult = {
@@ -226,9 +226,11 @@ describe("POST /api/downloads — async qBittorrent tracking", () => {
     );
 
     // Game status should be updated to downloading.
-    expect(storage.updateGameStatus).toHaveBeenCalledWith(gameId, {
-      status: "downloading",
-    });
+    expect(storage.updateGameStatus).toHaveBeenCalledWith(
+      gameId,
+      { status: "downloading" },
+      { preserveCurated: true }
+    );
   });
 
   it("creates a game_downloads record with the real hash when sync add returns an id", async () => {

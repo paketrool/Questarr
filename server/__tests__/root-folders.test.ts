@@ -6,6 +6,7 @@ import {
   probeRootFolder,
   refreshAllRootFoldersHealth,
   isWithinDeletableRootFolder,
+  isStrictlyInside,
 } from "../root-folders.js";
 import type { RootFolder } from "../../shared/schema.js";
 
@@ -109,7 +110,6 @@ describe("isWithinDeletableRootFolder", () => {
     ]);
 
     expect(await isWithinDeletableRootFolder("/mnt/old-library/SomeGame")).toBe(true);
-    expect(await isWithinDeletableRootFolder("/mnt/old-library")).toBe(true);
   });
 
   it.each([
@@ -124,6 +124,11 @@ describe("isWithinDeletableRootFolder", () => {
       target: "/etc/passwd",
     },
     {
+      name: "the root folder itself, which holds every other game too",
+      folders: [{ id: "rf-1", path: "/mnt/old-library", allowDelete: true }],
+      target: "/mnt/old-library",
+    },
+    {
       name: "a sibling folder with the same path prefix",
       folders: [{ id: "rf-1", path: "/mnt/old-library", allowDelete: true }],
       target: "/mnt/old-library-2/SomeGame",
@@ -133,5 +138,31 @@ describe("isWithinDeletableRootFolder", () => {
     vi.mocked(storage.getAllRootFolders).mockResolvedValue(folders as unknown as RootFolder[]);
 
     expect(await isWithinDeletableRootFolder(target)).toBe(false);
+  });
+});
+
+describe("isStrictlyInside", () => {
+  const root = path.resolve("/library");
+
+  it("accepts a child and a nested child", () => {
+    expect(isStrictlyInside(root, path.join(root, "Game"))).toBe(true);
+    expect(isStrictlyInside(root, path.join(root, "Game", "Data"))).toBe(true);
+  });
+
+  it("accepts a child whose name starts with two dots", () => {
+    expect(isStrictlyInside(root, path.join(root, "..Game"))).toBe(true);
+  });
+
+  it("rejects the root itself, its parent, and a prefix-sharing sibling", () => {
+    expect(isStrictlyInside(root, root)).toBe(false);
+    expect(isStrictlyInside(root, path.dirname(root))).toBe(false);
+    expect(isStrictlyInside(root, `${root}-other`)).toBe(false);
+    expect(isStrictlyInside(root, path.join(root, "..", "elsewhere"))).toBe(false);
+  });
+
+  it("treats children of the filesystem root as inside it", () => {
+    const fsRoot = path.parse(root).root;
+    expect(isStrictlyInside(fsRoot, path.join(fsRoot, "Game"))).toBe(true);
+    expect(isStrictlyInside(fsRoot, fsRoot)).toBe(false);
   });
 });

@@ -44,6 +44,9 @@ let inMemoryBearerToken: string | null = null;
 export function setBearerToken(token: string | null): void {
   inMemoryBearerToken = token;
 }
+export function getBearerToken(): string | null {
+  return inMemoryBearerToken;
+}
 
 // Must match CSRF_COOKIE_NAME in server/security.ts. Kept as a plain literal
 // (not imported) since client and server are separate bundles.

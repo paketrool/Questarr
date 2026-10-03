@@ -10,17 +10,17 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
-    environmentMatchGlobs: [["server/**", "node"]],
+    environmentMatchGlobs: [["server/**", "node"], ["scripts/**", "node"]],
     setupFiles: ["./tests/setup.ts"],
     testTimeout: 20000,
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "json-summary", "html"],
       thresholds: {
-        statements: 81,
-        branches: 74,
-        functions: 77,
-        lines: 82,
+        statements: 83,
+        branches: 76,
+        functions: 79,
+        lines: 84,
       },
     },
     exclude: [

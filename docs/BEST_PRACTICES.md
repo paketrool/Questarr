@@ -96,7 +96,7 @@ Assessed 2026-07-06 against `tsconfig.json`, `eslint.config.js`, and `.github/wo
   disposition.
 
 This is independent of `warnings_strict`'s test-coverage numbers above (branch coverage
-threshold is currently 74%, short of the criterion's 80% automated-test-suite alternative) —
+threshold is currently 76%, short of the criterion's 80% automated-test-suite alternative) —
 the ZAP scan satisfies `dynamic_analysis` on its own via the "tool that varies inputs" path,
 regardless of coverage.
 

@@ -97,8 +97,17 @@ export async function isWithinDeletableRootFolder(resolvedTarget: string): Promi
   return folders.some((folder) => {
     if (!folder.allowDelete) return false;
     const resolvedFolder = path.resolve(folder.path);
-    return (
-      resolvedTarget === resolvedFolder || resolvedTarget.startsWith(resolvedFolder + path.sep)
-    );
+    // Strictly inside the root folder, never the root folder itself.
+    return isStrictlyInside(resolvedFolder, resolvedTarget);
   });
+}
+
+/**
+ * True when `target` lies strictly below `root` (never `root` itself or a
+ * sibling that merely shares its prefix). Uses `path.relative` so a
+ * filesystem-root `root` ("/" or "C:\\") still contains its children.
+ */
+export function isStrictlyInside(root: string, target: string): boolean {
+  const rel = path.relative(root, target);
+  return rel !== "" && rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
 }

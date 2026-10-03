@@ -42,7 +42,10 @@ export const primaryNavigation: AppNavItem[] = [
     title: "Discover",
     url: "/discover",
     icon: Compass,
+    // The group header only toggles the group, so the Discover page itself needs its own
+    // entry here (like "All Games" under Library), or the desktop sidebar can't reach it.
     children: [
+      { title: "Browse", url: "/discover", icon: Compass },
       { title: "xREL.to Releases", url: "/xrel", icon: Newspaper },
       { title: "RSS Feeds", url: "/rss", icon: Rss },
     ],

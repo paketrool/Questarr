@@ -1,10 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import type { Request, Response, NextFunction } from "express";
 import {
   validateRequest,
   sanitizeSearchQuery,
   sanitizeGameId,
-  sanitizeIgdbId,
+  sanitizeExternalGameId,
   sanitizeGameStatus,
   sanitizeGameData,
   sanitizeIndexerData,
@@ -12,6 +12,7 @@ import {
   sanitizeDownloaderUpdateData,
   sanitizeDownloaderDownloadData,
   sanitizeIndexerSearchQuery,
+  rateLimitsDisabled,
 } from "../middleware";
 
 // Mock request and response objects
@@ -122,13 +123,13 @@ describe("Middleware - Input Sanitization", () => {
     });
   });
 
-  describe("sanitizeIgdbId", () => {
-    it("should allow valid IGDB ID", async () => {
+  describe("sanitizeExternalGameId", () => {
+    it("should allow valid external game ID", async () => {
       const req = createMockRequest({ params: { id: "12345" } });
       const res = createMockResponse();
       const next = createMockNext();
 
-      for (const validator of sanitizeIgdbId) {
+      for (const validator of sanitizeExternalGameId) {
         await validator(req as Request, res as Response, next);
       }
 
@@ -138,12 +139,12 @@ describe("Middleware - Input Sanitization", () => {
       expect(res.status).not.toHaveBeenCalled();
     });
 
-    it("should reject negative IGDB ID", async () => {
+    it("should reject negative external game ID", async () => {
       const req = createMockRequest({ params: { id: "-1" } });
       const res = createMockResponse();
       const next = createMockNext();
 
-      for (const validator of sanitizeIgdbId) {
+      for (const validator of sanitizeExternalGameId) {
         await validator(req as Request, res as Response, next);
       }
 
@@ -152,12 +153,12 @@ describe("Middleware - Input Sanitization", () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
-    it("should reject non-numeric IGDB ID", async () => {
+    it("should reject non-numeric external game ID", async () => {
       const req = createMockRequest({ params: { id: "abc" } });
       const res = createMockResponse();
       const next = createMockNext();
 
-      for (const validator of sanitizeIgdbId) {
+      for (const validator of sanitizeExternalGameId) {
         await validator(req as Request, res as Response, next);
       }
 
@@ -768,5 +769,29 @@ describe("Middleware - Input Sanitization", () => {
       expect(req.query?.limit).toBe(50);
       expect(req.query?.offset).toBe(10);
     });
+  });
+});
+
+describe("rateLimitsDisabled", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("is off unless DISABLE_RATE_LIMITS is set", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("DISABLE_RATE_LIMITS", "");
+    expect(rateLimitsDisabled()).toBe(false);
+  });
+
+  it.each(["development", "test"])("turns the limits off when NODE_ENV is %s", (nodeEnv) => {
+    vi.stubEnv("NODE_ENV", nodeEnv);
+    vi.stubEnv("DISABLE_RATE_LIMITS", "true");
+    expect(rateLimitsDisabled()).toBe(true);
+  });
+
+  it.each(["production", ""])("never turns the limits off when NODE_ENV is %j", (nodeEnv) => {
+    vi.stubEnv("NODE_ENV", nodeEnv);
+    vi.stubEnv("DISABLE_RATE_LIMITS", "true");
+    expect(rateLimitsDisabled()).toBe(false);
   });
 });

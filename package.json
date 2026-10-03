@@ -34,7 +34,7 @@
     "reset-password": "tsx scripts/reset-password.ts",
     "check:overrides": "node scripts/check-overrides.mjs",
     "check:deprecated": "node scripts/check-deprecated-deps.mjs",
-    "dev:test": "tsx scripts/clean-test-db.ts && cross-env SQLITE_DB_PATH=data/test.db PORT=5100 npm run dev",
+    "dev:test": "tsx scripts/clean-test-db.ts && cross-env SQLITE_DB_PATH=data/test.db PORT=5100 DISABLE_RATE_LIMITS=true npm run dev",
     "prepare": "husky"
   },
   "dependencies": {
@@ -206,21 +206,23 @@
   "overrides": {
     "proxy-addr": "^2.0.8",
     "socket.io-parser": "4.2.7",
+    "engine.io": "^6.6.10",
     "@esbuild-kit/core-utils": {
       "esbuild": "^0.25.0"
     },
     "body-parser": "1.20.6",
     "qs": "^6.16.0",
-    "brace-expansion": "^5.0.9",
+    "brace-expansion": "^5.0.12",
     "minimatch": "^10.2.5",
-    "fast-uri": "^3.1.7",
+    "fast-uri": "^3.1.8",
     "ip-address": "^10.7.2",
     "node-gyp": {
       "undici": "^6.29.0"
     },
     "eslint-plugin-react": {
       "eslint": "^10.9.1"
-    }
+    },
+    "engine.io": "^6.6.10"
   },
   "allowScripts": {
     "esbuild@0.25.12": true,

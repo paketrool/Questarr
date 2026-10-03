@@ -111,6 +111,21 @@ function getRequestToken(req: Request): { token: string; source: "cookie" | "bea
 }
 
 /**
+ * Resolve a raw JWT to its user, or undefined when the token is invalid,
+ * expired, or names a user that no longer exists. For callers outside the
+ * Express middleware chain (the Socket.IO handshake).
+ */
+export async function verifyAuthToken(token: string): Promise<User | undefined> {
+  try {
+    const secret = await getJwtSecret();
+    const payload = jwt.verify(token, secret) as { id: string; username: string };
+    return await storage.getUser(payload.id);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Optional authentication middleware. Sets req.user when a valid JWT is present
  * but never blocks the request — unauthenticated callers simply get no req.user.
  */

@@ -23,7 +23,7 @@ import {
   updateGameMilestoneSchema,
   updateGameScreenshotSchema,
   type User,
-} from "@shared/schema";
+} from "../shared/schema.js";
 
 const router = Router();
 

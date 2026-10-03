@@ -1,0 +1,85 @@
+name: E2E
+
+on:
+  push:
+    branches: [main, release/*]
+  pull_request:
+    branches: [main, release/*]
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  playwright:
+    name: Playwright e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v6.2.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js 22.x
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22.x
+          # Same accepted cache-poisoning trade-off as ci.yml (single maintainer with push access).
+          cache: "npm" # zizmor: ignore[cache-poisoning]
+
+      # Lifecycle scripts are required here (as in dast.yml): the dev server below opens a
+      # real SQLite file, which needs better-sqlite3's native binding compiled during install.
+      - name: Install dependencies
+        run: npm ci
+
+      # Installs the Chromium build matching the locked @playwright/test version.
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      # `dev:test` wipes data/test.db, listens on 5100 (the Playwright baseURL) and sets
+      # DISABLE_RATE_LIMITS so the suite, including CI retries, isn't throttled into 429s.
+      - name: Start test server
+        run: |
+          npm run dev:test > e2e-server.log 2>&1 &
+          echo $! > e2e-server.pid
+
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:5100/api/health > /dev/null; then
+              echo "Server is up"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Test server did not become healthy in time" >&2
+          cat e2e-server.log >&2
+          exit 1
+
+      - name: Run Playwright tests
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+            e2e-server.log
+          retention-days: 14
+
+      - name: Stop test server
+        if: always()
+        run: kill "$(cat e2e-server.pid)" 2>/dev/null || true

@@ -22,7 +22,7 @@ Five weighted dimensions. Max score: **100**.
 
 ---
 
-## Current Score: 100/100
+## Current Score: 78.2/100
 
 ### Automation — 26/30
 
@@ -44,9 +44,11 @@ The full end-to-end pipeline now works. The remaining gap is version-aware upgra
   - [x] Notify when newer version found
   - [ ] Optional Auto update when newer version found
 
-### Integrations — 15/25
+### Integrations — 17.9/25
 
-Solid core. Direct download and library sync are the missing pieces.
+Solid core. Debrid download and library imports are the missing pieces.
+
+Scored as the share of checked items (15 of 21) × 25.
 
 - [x] Torznab indexer support
 - [x] Newznab indexer support
@@ -55,11 +57,11 @@ Solid core. Direct download and library sync are the missing pieces.
 - [x] rTorrent
 - [x] SABnzbd
 - [x] NZBGet
-- [x] IGDB metadata
+- [x] RAWG metadata
 - [x] Steam wishlist import
 - [x] PCGamingWiki integration
 - [x] NexusMods trending mods
-- [ ] HowLongToBeat
+- [x] Time to Beat (IGDB `game_time_to_beats`, #1063; replaces the HowLongToBeat item)
 - [ ] Real-Debrid / debrid download client (P2)
 - [ ] Steam library import (owned games) (P3)
 - [ ] GOG library import (P3)
@@ -67,8 +69,8 @@ Solid core. Direct download and library sync are the missing pieces.
 - [ ] Webhook outbound events (P4)
 - [x] Playnite integration (library sync + request-to-download) (P4)
 - [ ] Gameyfin / RomM integrations (P4)
-- [ ] Indexer page links ("View on indexer") (P5)
-- [ ] DB system agnostic backend (P6)
+- [x] Indexer page links ("View on indexer") (#872)
+- [x] DB system agnostic backend: optional Postgres alongside SQLite (#1046)
 
 ### UX quality — 13.3/20
 
@@ -87,14 +89,14 @@ Functional. Mobile responsiveness is the main gap.
 ### Code health — 15/15
 
 - [x] TypeScript strict mode throughout (no `any`)
-- [x] 53 server test files (unit + integration)
-- [x] 29 client test files
+- [x] 115 server test files (unit + integration)
+- [x] 89 client test files
 - [x] Pre-commit hooks (ESLint + Prettier)
 - [x] SSRF-protected outbound fetch
 - [x] In-memory SQLite for tests (no real DB in CI)
 - [x] Drizzle migrations
 - [x] E2E tests for main user journeys (Playwright, port 5100)
-- [x] Test coverage gate in CI (73% statements / 68% branches / 67% functions / 74% lines)
+- [x] Test coverage gate in CI (83% statements / 76% branches / 79% functions / 84% lines)
 - [ ] Pagination on heavy list endpoints
 - [ ] Advanced caching for search results
 
@@ -142,4 +144,4 @@ In priority order:
 
 ---
 
-_Score last updated: 2026-07-05_
+_Score last updated: 2026-09-30. The previous header said 100/100, but its own dimensions summed to 75.3; the total is now the sum of the dimensions._
