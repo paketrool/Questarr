@@ -96,7 +96,7 @@ describe("RawgClient", { timeout: 20000 }, () => {
   });
 
   describe("request plumbing", () => {
-    it("sends the Key header and the search query params", async () => {
+    it("sends the API key as a query parameter along with the search query params", async () => {
       fetchMock.mockResolvedValueOnce(jsonResponse(pagination([])));
       const { rawgClient } = await import("../rawg.js");
 
@@ -108,8 +108,11 @@ describe("RawgClient", { timeout: 20000 }, () => {
       expect(u.origin + u.pathname).toBe("https://api.rawg.io/api/games");
       expect(u.searchParams.get("search")).toBe("hollow knight");
       expect(u.searchParams.get("page_size")).toBe("20");
+      // RAWG only accepts the key as a query parameter — a header makes it
+      // return 401.
+      expect(u.searchParams.get("key")).toBe("env-key");
       const headers = (options as { headers: Record<string, string> }).headers;
-      expect(headers.Key).toBe("env-key");
+      expect(headers).toEqual({ Accept: "application/json" });
     });
 
     it("throws RawgApiError with status on 401", async () => {
@@ -137,8 +140,8 @@ describe("RawgClient", { timeout: 20000 }, () => {
       const { rawgClient } = await import("../rawg.js");
       const result = await rawgClient.testApiKey("some-key");
       expect(result).toEqual({ success: true });
-      const headers = (fetchMock.mock.calls[0][1] as { headers: Record<string, string> }).headers;
-      expect(headers.Key).toBe("some-key");
+      const u = new URL(fetchMock.mock.calls[0][0] as string);
+      expect(u.searchParams.get("key")).toBe("some-key");
     });
 
     it("testApiKey reports a rejected key", async () => {

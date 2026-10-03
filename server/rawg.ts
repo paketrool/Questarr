@@ -5,10 +5,13 @@ import { safeFetch } from "./ssrf.js";
 
 /**
  * RAWG (https://rawg.io) API client — Questarr's game-metadata provider.
- * RAWG is a plain REST API: every request is a GET with the user's API key in
- * the `Key` header (free keys from https://rawg.io/apidocs). The free tier is
- * rate-limited to a few requests per 10 seconds, so callers must not fire off
- * bursts of per-game requests without throttling (see getGamesForRefresh).
+ * RAWG is a plain REST API: every request is a GET carrying the user's API
+ * key in the `key` QUERY PARAMETER (free keys from https://rawg.io/apidocs).
+ * The API only accepts the key that way — sending it in a `Key` header
+ * (or any other header) makes RAWG reject the request with 401. The free
+ * tier is rate-limited to a few requests per 10 seconds, so callers must not
+ * fire off bursts of per-game requests without throttling (see
+ * getGamesForRefresh).
  *
  * Attribution: RAWG's terms require an active hyperlink to rawg.io on every
  * page where its data or images are shown. formatGame() therefore always
@@ -198,6 +201,8 @@ class RawgClient {
         url.searchParams.set(name, String(value));
       }
     }
+    // RAWG only accepts the key as a query parameter; a header is rejected.
+    url.searchParams.set("key", key);
 
     let response: Response;
     try {
@@ -206,7 +211,6 @@ class RawgClient {
           method: "GET",
           headers: {
             Accept: "application/json",
-            Key: key,
           },
           timeoutMs: REQUEST_TIMEOUT_MS,
         })
