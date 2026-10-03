@@ -7,12 +7,16 @@ test.describe("Navigation", () => {
     await page.goto("/");
     await expect(page).toHaveTitle(/Questarr|Dashboard/);
 
-    await page.getByTestId("nav-discover").click();
-    await expect(page).toHaveURL("/discover");
-
-    await page.getByTestId("nav-library").click();
+    // Library is a collapsible group; its "All Games" child is the "/" page.
+    await page.getByTestId("nav-all-games").click();
     await expect(page).toHaveURL("/");
 
+    // Discover is also a group (children: xREL.to Releases, RSS Feeds). The
+    // group header only toggles; its children are the actual destinations.
+    await page.getByTestId("nav-rss-feeds").click();
+    await expect(page).toHaveURL("/rss");
+
+    // Settings is a plain (non-group) item.
     await page.getByTestId("nav-settings").click();
     await expect(page).toHaveURL("/settings");
   });

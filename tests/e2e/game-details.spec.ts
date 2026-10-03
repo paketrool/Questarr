@@ -10,12 +10,12 @@ test.describe("Game Details", () => {
         {
           id: "test-game-id-123",
           title: "Cyberpunk 2077",
-          coverUrl: "https://images.igdb.com/igdb/image/upload/t_cover_big/co2mjs.jpg",
+          coverUrl: "https://media.rawg.io/media/games/cyberpunk2077.jpg",
           platforms: ["PC", "PS5"],
           genres: ["RPG"],
           status: "wanted",
           addedAt: new Date().toISOString(),
-          igdbId: 1877,
+          rawgId: 1877,
           hidden: false,
         },
       ];
@@ -32,8 +32,8 @@ test.describe("Game Details", () => {
     // Hover to show actions
     await card.hover();
 
-    // Click the details button
-    await page.getByTestId("button-details-test-game-id-123").click();
+    // Clicking the card itself opens the details modal
+    await card.click();
 
     // Expect a modal
     await expect(page.getByRole("dialog")).toBeVisible();

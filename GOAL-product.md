@@ -55,7 +55,7 @@ Solid core. Direct download and library sync are the missing pieces.
 - [x] rTorrent
 - [x] SABnzbd
 - [x] NZBGet
-- [x] IGDB metadata
+- [x] RAWG metadata
 - [x] Steam wishlist import
 - [x] PCGamingWiki integration
 - [x] NexusMods trending mods

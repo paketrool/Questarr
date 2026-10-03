@@ -45,10 +45,6 @@ describe("ImportManager", () => {
     getConfiguredRoots: vi.fn().mockResolvedValue([]),
   };
 
-  const platformService = {
-    getSourcePlatform: vi.fn(),
-  };
-
   const archiveService = {
     isArchive: vi.fn(),
     extract: vi.fn(),
@@ -71,7 +67,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -98,7 +93,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -129,7 +123,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -157,7 +150,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -187,7 +179,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -207,7 +198,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -221,7 +211,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -242,7 +231,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -271,7 +259,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -299,7 +286,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -342,7 +328,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -377,7 +362,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -411,7 +395,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -444,7 +427,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -487,7 +469,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -531,7 +512,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -579,7 +559,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -636,7 +615,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -692,7 +670,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -744,7 +721,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -783,7 +759,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -844,7 +819,6 @@ describe("ImportManager", () => {
     return new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
   }
@@ -953,7 +927,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -985,7 +958,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -1034,7 +1006,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -1082,7 +1053,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -1127,7 +1097,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
 
@@ -1173,7 +1142,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
     await manager.processImport("dl-1", "/remote/path");
@@ -1191,7 +1159,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
     await manager.processImport("dl-1", "/remote/path");
@@ -1209,7 +1176,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
     await manager.processImport("dl-1", "/remote/path");
@@ -1223,7 +1189,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
     await manager.processImport("dl-1", "/remote/path");
@@ -1254,7 +1219,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
     await manager.processImport("dl-1", "/remote/path");
@@ -1272,7 +1236,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
     await manager.processImport("dl-1", "/remote/path");
@@ -1292,7 +1255,6 @@ describe("ImportManager", () => {
     const manager = new ImportManager(
       storage as never, // NOSONAR
       pathService as never, // NOSONAR
-      platformService as never, // NOSONAR
       archiveService as never // NOSONAR
     );
     await manager.processImport("dl-1", "/remote/path");
@@ -1336,7 +1298,6 @@ describe("ImportManager", () => {
       const manager = new ImportManager(
         storage as never, // NOSONAR
         pathService as never, // NOSONAR
-        platformService as never, // NOSONAR
         archiveService as never, // NOSONAR
         securityScanService as never // NOSONAR
       );
@@ -1400,7 +1361,6 @@ describe("ImportManager", () => {
       const manager = new ImportManager(
         storage as never, // NOSONAR
         pathService as never, // NOSONAR
-        platformService as never, // NOSONAR
         archiveService as never, // NOSONAR
         securityScanService as never // NOSONAR
       );
@@ -1438,7 +1398,6 @@ describe("ImportManager", () => {
       const manager = new ImportManager(
         storage as never, // NOSONAR
         pathService as never, // NOSONAR
-        platformService as never, // NOSONAR
         archiveService as never, // NOSONAR
         securityScanService as never // NOSONAR
       );
@@ -1479,7 +1438,6 @@ describe("ImportManager", () => {
       const manager = new ImportManager(
         storage as never, // NOSONAR
         pathService as never, // NOSONAR
-        platformService as never, // NOSONAR
         archiveService as never, // NOSONAR
         securityScanService as never // NOSONAR
       );
@@ -1513,7 +1471,6 @@ describe("ImportManager", () => {
       const manager = new ImportManager(
         storage as never, // NOSONAR
         pathService as never, // NOSONAR
-        platformService as never, // NOSONAR
         archiveService as never // NOSONAR
       );
 
@@ -1533,7 +1490,6 @@ describe("ImportManager", () => {
       const manager = new ImportManager(
         storage as never, // NOSONAR
         pathService as never, // NOSONAR
-        platformService as never, // NOSONAR
         archiveService as never // NOSONAR
       );
 
@@ -1575,7 +1531,6 @@ describe("ImportManager", () => {
       const manager = new ImportManager(
         storage as never, // NOSONAR
         pathService as never, // NOSONAR
-        platformService as never, // NOSONAR
         archiveService as never, // NOSONAR
         securityScanService as never // NOSONAR
       );

@@ -52,6 +52,12 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
+  // Guards for the login-vs-/me race: a /api/auth/me request that was in
+  // flight before a successful login resolves with a stale 401 after the
+  // login and must not tear down the fresh session the login just
+  // established.
+  const lastLoginAtRef = useRef(0);
+  const meNullFetchStartAtRef = useRef(0);
   const [needsSetup, setNeedsSetup] = useState(false);
   const [location, setLocation] = useLocation();
   const queryClient = useQueryClient();
@@ -103,6 +109,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // auth cookie is sent automatically. apiFetch also attaches an
       // in-memory bearer token here if migrateLegacyLocalStorageToken found
       // one for this tab.
+      const fetchStartedAt = Date.now();
       const res = await apiFetch("/api/auth/me");
 
       if (res.ok) {
@@ -111,15 +118,27 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       if (res.status === 401 || res.status === 403) {
         setBearerToken(null);
-        // Drop every other cached query (stale authenticated data from a
-        // prior session) but deliberately spare "/api/auth/status" --
-        // clearing the whole client here can cancel that query's own
-        // in-flight fetch and strand its observers (setup/config screens)
-        // on an indefinite loading state instead of just re-resolving once
-        // this query itself settles to null.
-        queryClient.removeQueries({
-          predicate: (query) => query.queryKey[0] !== "/api/auth/status",
-        });
+        meNullFetchStartAtRef.current = fetchStartedAt;
+        // Only drop other cached queries when this 401 is genuinely stale
+        // with respect to any login: a login that completed after this
+        // fetch started owns a fresh cookie session, and its (possibly just
+        // fetched) cached data must survive this pre-login 401.
+        if (lastLoginAtRef.current < fetchStartedAt) {
+          // Drop every other cached query (stale authenticated data from a
+          // prior session). Deliberately spared: "/api/auth/status" --
+          // clearing the whole client here can cancel that query's own
+          // in-flight fetch and strand its observers (setup/config screens)
+          // on an indefinite loading state instead of just re-resolving once
+          // this query itself settles to null; and "/api/auth/me" -- this
+          // very query. Removing its own in-flight entry from under it
+          // strands its observer in a permanent pending state, which keeps
+          // the login button disabled forever after a logout (the button is
+          // gated on isLoading, which includes the me query's pending state).
+          queryClient.removeQueries({
+            predicate: (query) =>
+              query.queryKey[0] !== "/api/auth/status" && query.queryKey[0] !== "/api/auth/me",
+          });
+        }
         return null;
       }
 
@@ -148,7 +167,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     if (meData) {
       setUser(meData);
-    } else if (meData === null) {
+    } else if (meData === null && lastLoginAtRef.current < meNullFetchStartAtRef.current) {
+      // A 401 that predates a recent login is stale (the login established
+      // a fresh cookie session afterwards) -- don't wipe the new user.
       setUser(null);
     }
   }, [meData]);
@@ -168,6 +189,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // so a stale/invalid migrated bearer left in place would keep
       // clobbering this fresh, valid cookie session on every later
       // /api/auth/me check.
+      lastLoginAtRef.current = Date.now();
       setBearerToken(null);
       setUser(data.user);
     },
