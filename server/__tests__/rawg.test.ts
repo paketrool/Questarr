@@ -200,7 +200,7 @@ describe("RawgClient", { timeout: 20000 }, () => {
       expect(formatted.rawgSlug).toBe("hollow-knight");
       expect(formatted.title).toBe("Hollow Knight");
       expect(formatted.summary).toBe("Descend into an intricate kingdom. Full of mystery & peril.");
-      expect(formatted.coverUrl).toBe("https://media.rawg.io/media/games/ab2a35-b.jpg");
+      expect(formatted.coverUrl).toBe("https://media.rawg.io/media/screenshots/bg.jpg");
       expect(formatted.releaseDate).toBe("2017-02-24");
       expect(formatted.aggregatedRating).toBe(87);
       expect(formatted.platforms).toEqual(["PC", "Nintendo Switch"]);
@@ -226,6 +226,12 @@ describe("RawgClient", { timeout: 20000 }, () => {
           rawgUrl: "https://rawg.io/games/100",
         },
       ]);
+    });
+
+    it("falls back to the legacy image field when background_image is absent", async () => {
+      const { rawgClient } = await import("../rawg.js");
+      const formatted = rawgClient.formatGame({ ...game, background_image: null });
+      expect(formatted.coverUrl).toBe("https://media.rawg.io/media/games/ab2a35-b.jpg");
     });
 
     it("flags ESRB Mature / Adults Only as age restricted", async () => {
