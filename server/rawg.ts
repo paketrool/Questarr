@@ -504,7 +504,9 @@ class RawgClient {
       rawgSlug: game.slug ?? null,
       title: game.name,
       summary: stripHtml(game.description) || "",
-      coverUrl: game.image ?? "",
+      // RAWG's current API only returns `background_image` (the old `image`
+      // field is no longer sent); keep it as a fallback for older payloads.
+      coverUrl: game.background_image ?? game.image ?? "",
       releaseDate: releaseDate ?? "",
       rating: null,
       platforms: game.platforms?.map((p) => p.name) || [],
